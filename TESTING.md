@@ -251,7 +251,7 @@ npm run build && grep -rl "service_role\|SUPABASE_SERVICE_ROLE_KEY\|ANTHROPIC_AP
 | D4 | Supabase → Authentication → URL Configuration | Site URL = your production domain; add `https://your-domain.com/auth/callback` |
 | D5 | Repeat B1–B4 on the live URL | Waitlist saves in production |
 
-Full deployment detail is in `README.md` §7 and §8.
+Full deployment detail is in `README.md` §8 and §9.
 
 ---
 

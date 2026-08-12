@@ -17,12 +17,12 @@ to Vercel.
 4. [Database migrations](#4-database-migrations)
 5. [Storage setup](#5-storage-setup)
 6. [Admin setup](#6-admin-setup)
-7. [Before real users arrive](#6b-before-real-users-arrive)
-7. [Vercel deployment](#7-vercel-deployment)
-8. [Production environment variables](#8-production-environment-variables)
-9. [How it fits together](#9-how-it-fits-together)
-10. [Security model](#10-security-model)
-11. [Connecting a real AI provider](#11-connecting-a-real-ai-provider)
+7. [Before real users arrive](#7-before-real-users-arrive)
+8. [Vercel deployment](#8-vercel-deployment)
+9. [Production environment variables](#9-production-environment-variables)
+10. [How it fits together](#10-how-it-fits-together)
+11. [Security model](#11-security-model)
+12. [Connecting a real AI provider](#12-connecting-a-real-ai-provider)
 
 ---
 
@@ -184,7 +184,7 @@ refuses to remove the last remaining administrator.
 
 ---
 
-## 6b. Before real users arrive
+## 7. Before real users arrive
 
 Two Supabase settings that can only be changed in the dashboard. Neither blocks
 deployment, but the second one matters as soon as anyone other than you signs up.
@@ -202,14 +202,14 @@ mail, the app only asks it to.
 
 ---
 
-## 7. Vercel deployment
+## 8. Vercel deployment
 
 1. Push this repository to GitHub.
 2. In Vercel, **Add New → Project** and import it. The framework is detected
    automatically; leave the build command as `bun run build` (or
    `npm run build`) and the output directory unset — Nitro writes `.output/`
    and Vercel picks it up.
-3. Add the environment variables from §8 and deploy.
+3. Add the environment variables from §9 and deploy.
 4. Back in Supabase → *Authentication → URL Configuration*, set the Site URL to
    your production domain and add `https://your-domain.com/auth/callback` (plus
    `https://*.vercel.app/auth/callback` if you want preview deployments to be
@@ -222,7 +222,7 @@ CI, set `NITRO_PRESET=vercel`.
 
 ---
 
-## 8. Production environment variables
+## 9. Production environment variables
 
 In Vercel → *Settings → Environment Variables*:
 
@@ -243,7 +243,7 @@ renaming them with a `VITE_` prefix.
 
 ---
 
-## 9. How it fits together
+## 10. How it fits together
 
 ```
 src/
@@ -284,7 +284,7 @@ all read from it, so adding a section or question type is a one-file change.
 
 ---
 
-## 10. Security model
+## 11. Security model
 
 - **Row Level Security is on for every table.** Hiding a nav link is never what
   protects data; the database refuses the query.
@@ -307,7 +307,7 @@ all read from it, so adding a section or question type is a one-file change.
 
 ---
 
-## 11. Connecting a real AI provider
+## 12. Connecting a real AI provider
 
 Generation ships with a clearly-labelled development generator. It produces
 correctly shaped placeholder questions so the whole flow can be exercised, marks
