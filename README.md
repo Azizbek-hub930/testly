@@ -17,6 +17,7 @@ to Vercel.
 4. [Database migrations](#4-database-migrations)
 5. [Storage setup](#5-storage-setup)
 6. [Admin setup](#6-admin-setup)
+7. [Before real users arrive](#6b-before-real-users-arrive)
 7. [Vercel deployment](#7-vercel-deployment)
 8. [Production environment variables](#8-production-environment-variables)
 9. [How it fits together](#9-how-it-fits-together)
@@ -180,6 +181,24 @@ The file currently names `azizbekboyxorozov2010@gmail.com`.
 After that, an admin can promote or demote others from **/admin/users**. That
 action runs server-side, re-checks the caller's role against the database, and
 refuses to remove the last remaining administrator.
+
+---
+
+## 6b. Before real users arrive
+
+Two Supabase settings that can only be changed in the dashboard. Neither blocks
+deployment, but the second one matters as soon as anyone other than you signs up.
+
+**Email confirmation.** *Authentication → Providers → Email → "Confirm email".*
+Leave it on for real users. Turning it off while testing makes signup instant and
+avoids the email step entirely; the signup screen handles both settings.
+
+**Custom SMTP — do this before launch.** *Authentication → Emails → SMTP
+Settings.* Supabase's built-in sender allows only a couple of messages per hour
+and is documented as test-only, so **password reset and email confirmation are
+unreliable until you connect a real provider** (Resend, Postmark and SendGrid all
+have free tiers). Nothing in this codebase needs to change — Supabase sends the
+mail, the app only asks it to.
 
 ---
 
