@@ -21,7 +21,7 @@ vite, the TanStack build plugin), are not present in the deployed bundle, and
 need attacker-controlled input to those libraries to trigger. Not a blocker.
 
 > `npm install` regenerates `package-lock.json`. Delete it before committing —
-> `bun.lock` is the lockfile Lovable and Vercel use.
+> `bun.lock` is the lockfile Vercel uses.
 
 ### A2. Confirm the code is healthy
 

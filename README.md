@@ -29,7 +29,7 @@ to Vercel.
 ## 1. Local setup
 
 Requires [Bun](https://bun.sh) (the lockfile is `bun.lock`). npm works too, but
-it will create a second lockfile.
+it will create a second lockfile — delete `package-lock.json` before committing.
 
 ```bash
 bun install
@@ -230,7 +230,7 @@ only feature waiting on this.
    able to sign in).
 
 The build target is auto-detected: Nitro sees Vercel's environment and produces
-a Vercel build, while Lovable's own preview keeps producing a Cloudflare one.
+a Vercel build automatically.
 Nothing in `vite.config.ts` needs to change. To pin it explicitly from your own
 CI, set `NITRO_PRESET=vercel`.
 
