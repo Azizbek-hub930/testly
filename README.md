@@ -36,7 +36,7 @@ cp .env.example .env      # then fill in the Supabase values
 bun run dev
 ```
 
-The app runs at the URL printed by Vite (usually http://localhost:5173).
+The app runs at the URL printed by Vite — normally http://localhost:8080.
 
 | Script | What it does |
 | --- | --- |
@@ -59,11 +59,11 @@ a backend explains that it isn't connected instead of failing silently.
 3. **Authentication → Providers → Email** — leave enabled. Decide whether
    "Confirm email" is on; the signup screen handles both cases.
 4. **Authentication → URL Configuration**:
-   - *Site URL*: `http://localhost:5173` for development, your production
+   - *Site URL*: `http://localhost:8080` for development, your production
      domain once deployed.
    - *Redirect URLs*: add every origin the app runs on, with the callback path:
      ```
-     http://localhost:5173/auth/callback
+     http://localhost:8080/auth/callback
      https://your-domain.com/auth/callback
      https://*.vercel.app/auth/callback
      ```
@@ -111,15 +111,18 @@ each into the Supabase SQL editor (*SQL Editor → New query*) and run it, or us
 | --- | --- |
 | `0001_core.sql` | `profiles`, `waitlist`, `is_admin()`, the role-escalation guard, the `auth.users` → `profiles` trigger, RLS policies, column grants |
 | `0002_product.sql` | `documents`, `assessments`, `questions`, their RLS policies and grants |
-| `0003_storage.sql` | The private `sources` bucket and its storage policies |
+| `0003_storage.sql` | The private `sources` bucket (policies are added in the dashboard — see `supabase/STORAGE_SETUP.md`) |
 | `0004_admin_bootstrap.sql` | Appoints your first administrator (see §6) |
 | `0005_admin_stats.sql` | `waitlist_stats()` for the admin overview |
 
 Every file is idempotent, so re-running one is safe.
 
-If `0003_storage.sql` fails with *"must be owner of table objects"*, create the
-four policies from *Storage → Policies → sources* in the dashboard instead,
-using the same expressions — the rest of the file will already have applied.
+**Storage policies are not created by SQL.** On a managed project,
+`storage.objects` is owned by `supabase_storage_admin`; PostgreSQL only lets a
+table's owner create policies on it, and `postgres` may not assume that role.
+`0003_storage.sql` therefore creates the bucket only, and the access policy is
+created in the dashboard — see **`supabase/STORAGE_SETUP.md`**. That is
+Supabase's supported route, not a workaround.
 
 The TypeScript mirror of this schema is `src/lib/supabase/types.ts`. If you
 change a migration, update that file in the same commit, or regenerate it:

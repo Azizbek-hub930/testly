@@ -70,14 +70,18 @@ with checks as (
   union all
   select
     7,
-    'Storage policies',
+    'Storage access policy',
+    -- One dashboard-created policy can cover all four operations, so this
+    -- checks that a policy mentioning the bucket exists at all. Whether it
+    -- behaves correctly is proved by uploading as one user and confirming a
+    -- second user cannot see the file (TESTING.md B24 and C3).
     (
       select count(*) from pg_policies
        where schemaname = 'storage'
          and tablename = 'objects'
-         and policyname like 'sources_%'
+         and (coalesce(qual, '') || coalesce(with_check, '')) like '%sources%'
     ),
-    4
+    1
 )
 select
   check_name                                     as "Check",
