@@ -193,12 +193,26 @@ deployment, but the second one matters as soon as anyone other than you signs up
 Leave it on for real users. Turning it off while testing makes signup instant and
 avoids the email step entirely; the signup screen handles both settings.
 
-**Custom SMTP — do this before launch.** *Authentication → Emails → SMTP
+**Custom SMTP — before inviting real users.** *Authentication → Emails → SMTP
 Settings.* Supabase's built-in sender allows only a couple of messages per hour
-and is documented as test-only, so **password reset and email confirmation are
-unreliable until you connect a real provider** (Resend, Postmark and SendGrid all
-have free tiers). Nothing in this codebase needs to change — Supabase sends the
+and is documented as test-only, so **password reset is unreliable until you
+connect a real provider**. Nothing in this codebase changes — Supabase sends the
 mail, the app only asks it to.
+
+What this does and doesn't require:
+
+- **No payment.** Free tiers on Brevo, Resend, SendGrid and similar are far above
+  what an early-access product sends. Check current limits before choosing.
+- **No domain.** Most providers let you verify a single sender address — your own
+  Gmail, for instance — instead of a whole domain. Sending from your own domain
+  improves deliverability, but is not needed to make reset links work.
+- **Not related to hosting.** Vercel supplies the site's web address
+  (`*.vercel.app`, or a custom domain if you add one). It does not send email,
+  and email cannot be sent from a `*.vercel.app` address, because sending needs
+  DNS records on a domain you control.
+
+With "Confirm email" off, signup needs no email at all — password reset is the
+only feature waiting on this.
 
 ---
 
