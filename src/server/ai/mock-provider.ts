@@ -17,6 +17,46 @@ import type { AssessmentProvider, GeneratedQuestion, GenerationRequest } from "@
 const LETTERS = ["A", "B", "C", "D"] as const;
 const TFNG = ["True", "False", "Not Given"] as const;
 
+/**
+ * Placeholder question text has to be genuinely distinct per question, not just
+ * numbered. `validateQuestions` drops near-duplicates by comparing word sets and
+ * ignores tokens shorter than three characters, so "…question 1" and
+ * "…question 2" are identical to it — a uniform mock would have most of its
+ * output discarded as duplicates.
+ *
+ * 13 stems × 7 focuses are coprime, giving 91 distinct combinations before any
+ * repeat, comfortably more than the 60-question maximum.
+ */
+const STEMS = [
+  "the main idea of the passage",
+  "the author's use of evidence",
+  "the meaning of a word in context",
+  "the structure of the argument",
+  "an inference the passage supports",
+  "the purpose of a cited detail",
+  "a comparison the author draws",
+  "the tone of a particular paragraph",
+  "data reported in the passage",
+  "a claim the passage qualifies",
+  "the relationship between two ideas",
+  "an assumption behind the argument",
+  "the function of a worked example",
+] as const;
+
+const FOCUSES = [
+  "overall comprehension",
+  "close reading",
+  "vocabulary in context",
+  "logical reasoning",
+  "textual evidence",
+  "rhetorical purpose",
+  "quantitative detail",
+] as const;
+
+function pick<T>(items: readonly T[], index: number): T {
+  return items[index % items.length] as T;
+}
+
 /** Deterministic per assessment, so re-running a draft gives a stable preview. */
 function seededPick<T>(items: readonly T[], seed: string, salt: number): T {
   let hash = salt;
@@ -64,7 +104,12 @@ function buildQuestion(
     questionNumber,
     questionType,
     passage,
-    questionText: `Sample ${questionType} question ${questionNumber} for "${request.source.title}".`,
+    // The `qNN` marker survives tokenisation (three characters) and guarantees
+    // uniqueness even if a stem/focus pair ever repeats.
+    questionText:
+      `Sample ${questionType} question q${String(questionNumber).padStart(2, "0")}: ` +
+      `${pick(STEMS, questionNumber)}, focusing on ${pick(FOCUSES, questionNumber)}. ` +
+      `Placeholder generated for "${request.source.title}".`,
     options,
     correctAnswer,
     explanation:

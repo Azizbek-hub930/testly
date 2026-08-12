@@ -105,15 +105,17 @@ export function toFriendlyMessage(error: unknown, context: ErrorContext = "gener
     return "We couldn't reach the server. Check your connection and try again.";
   }
 
-  if (isAuthExpiredError(error)) {
-    return "Your session expired. Please sign in again.";
-  }
-
   const code = codeOf(error);
   const message = messageOf(error);
   const lower = message.toLowerCase();
 
   // --- Postgres / PostgREST -------------------------------------------------
+  //
+  // These run before the session-expired check on purpose. PostgREST answers a
+  // privilege failure with HTTP 401 *and* SQLSTATE 42501 — a non-admin opening
+  // an admin query gets exactly that. Testing the status first would tell them
+  // their session had expired, sending them to re-authenticate over a problem
+  // that signing in again cannot fix.
   if (code === "23505") {
     return context === "waitlist"
       ? "You're already on the Testly waitlist."
@@ -124,6 +126,10 @@ export function toFriendlyMessage(error: unknown, context: ErrorContext = "gener
     return "You don't have permission to do that.";
   }
   if (code === "PGRST116") return "We couldn't find that item.";
+
+  if (isAuthExpiredError(error)) {
+    return "Your session expired. Please sign in again.";
+  }
 
   // --- Auth (GoTrue) --------------------------------------------------------
   if (lower.includes("invalid login credentials")) {
