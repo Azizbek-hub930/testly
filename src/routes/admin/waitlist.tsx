@@ -385,6 +385,13 @@ function WaitlistDetail({ entry, onClose }: { entry: WaitlistEntry | null; onClo
               <DetailRow label="Email" value={entry.email} mono />
               <DetailRow label="Organization" value={entry.organization ?? "—"} />
               <DetailRow label="Role" value={entry.role ?? "—"} />
+              <DetailRow label="Phone" value={entry.phone ?? "—"} mono />
+              <DetailRow label="Telegram" value={entry.telegram ?? "—"} mono />
+              <DetailRow label="Website" value={entry.website ?? "—"} mono />
+              <DetailRow label="City" value={entry.city ?? "—"} />
+              <DetailRow label="Students" value={entry.students ?? "—"} />
+              <DetailRow label="Exams" value={entry.exams ?? "—"} />
+              <DetailRow label="Message" value={entry.message ?? "—"} />
               <DetailRow label="Joined" value={formatDateTime(entry.created_at)} />
               <DetailRow label="Source" value={entry.source} />
             </dl>

@@ -19,6 +19,13 @@ export async function joinWaitlist(input: WaitlistPayload): Promise<JoinResult> 
     organization: input.organization,
     role: input.role,
     source: input.source,
+    phone: input.phone,
+    telegram: input.telegram,
+    city: input.city,
+    students: input.students,
+    exams: input.exams,
+    message: input.message,
+    website: input.website,
   });
 
   if (error) {

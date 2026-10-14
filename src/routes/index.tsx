@@ -1,23 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Agents } from "@/components/landing/agents";
-import { Audience } from "@/components/landing/audience";
-import { Exams } from "@/components/landing/exams";
-import { Faq } from "@/components/landing/faq";
-import { FinalCta } from "@/components/landing/final-cta";
-import { Hero } from "@/components/landing/hero";
-import { HowItWorks } from "@/components/landing/how-it-works";
-import { PaperToPractice } from "@/components/landing/paper-to-practice";
-import { Pricing } from "@/components/landing/pricing";
-import { ProductPreview } from "@/components/landing/product-preview";
-import { QuestionPreview } from "@/components/landing/question-preview";
-import { Waitlist } from "@/components/landing/waitlist";
-import { Footer } from "@/components/site/footer";
-import { Navbar } from "@/components/site/navbar";
+import { Audience } from "@/components/home/audience";
+import { Classroom } from "@/components/home/classroom";
+import { FinalCta, HomeFooter } from "@/components/home/closing";
+import { Engine } from "@/components/home/engine";
+import { Exams } from "@/components/home/exams";
+import { Faq } from "@/components/home/faq";
+import { Hero } from "@/components/home/hero";
+import { HomeNav } from "@/components/home/nav";
+import { Partners, Process } from "@/components/home/partners";
+import { Problem } from "@/components/home/problem";
+import { HomeShell } from "@/components/home/theme";
 
-const TITLE = "Testly — AI-powered SAT & IELTS assessment generation";
+const TITLE = "Testly — AI mock exams for SAT & IELTS learning centers";
 const DESC =
-  "Testly transforms source material into original SAT and IELTS practice questions using specialized AI agents.";
+  "Testly turns source material into structured SAT and IELTS-style mock exams with specialized AI agents. Join the waitlist to become an early partner.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,25 +28,29 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+/*
+ * A product introduction that ends in one action: join the waitlist.
+ * Story order mirrors the promo video:
+ * promise → partners → the manual mess → the engine → real exam shapes →
+ * the whole room (coming next) → who it's for → how joining works → FAQ.
+ */
 function Index() {
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <HomeShell>
+      <HomeNav />
       <main>
         <Hero />
-        <PaperToPractice />
-        <HowItWorks />
-        <ProductPreview />
-        <QuestionPreview />
+        <Partners />
+        <Problem />
+        <Engine />
         <Exams />
-        <Agents />
+        <Classroom />
         <Audience />
-        <Waitlist />
-        <Pricing />
+        <Process />
         <Faq />
         <FinalCta />
       </main>
-      <Footer />
-    </div>
+      <HomeFooter />
+    </HomeShell>
   );
 }

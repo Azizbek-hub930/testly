@@ -10,14 +10,37 @@ import { getSection, isValidQuestionType } from "@/lib/exams";
  * constraints, because client-side validation is a courtesy, not a control.
  */
 
+/** Audience segments shown on the landing page and in the waitlist form. */
 export const WAITLIST_ROLES = [
-  "Learning Center",
-  "Tutor",
-  "School",
-  "Organization",
-  "Student",
+  "Private tutor",
+  "Web host startup",
+  "Learning center",
+  "School or institution",
   "Other",
 ] as const;
+
+/**
+ * The "how big are you" question depends on who is applying; individuals
+ * (private tutors, "Other") aren't asked at all.
+ */
+export const WAITLIST_SIZE_QUESTION: Partial<
+  Record<(typeof WAITLIST_ROLES)[number], { label: string; options: readonly string[] }>
+> = {
+  "Web host startup": {
+    label: "Monthly users on your platform",
+    options: ["Under 1,000", "1,000–10,000", "10,000–50,000", "50,000+"],
+  },
+  "Learning center": {
+    label: "Students you prepare per month",
+    options: ["Under 50", "50–200", "200–1,000", "1,000+"],
+  },
+  "School or institution": {
+    label: "Students in exam preparation",
+    options: ["Under 100", "100–500", "500–2,000", "2,000+"],
+  },
+};
+
+export const WAITLIST_EXAMS = ["SAT", "IELTS", "Other"] as const;
 
 export type WaitlistRole = (typeof WAITLIST_ROLES)[number];
 
@@ -45,8 +68,23 @@ export const waitlistSchema = z.object({
   email: emailField,
   organization: optionalText(160),
   role: z.enum(WAITLIST_ROLES, {
-    errorMap: () => ({ message: "Please choose a role." }),
+    errorMap: () => ({ message: "Please choose what describes you." }),
   }),
+  phone: z
+    .string()
+    .trim()
+    .min(1, "Please enter a phone number.")
+    .max(40, "That phone number is too long.")
+    .regex(/^\+?[\d\s()-]{5,}$/, "Please enter a valid phone number."),
+  telegram: optionalText(64),
+  city: optionalText(80),
+  students: z.string().trim().max(40).nullable().default(null),
+  website: optionalText(200),
+  exams: z
+    .array(z.enum(WAITLIST_EXAMS))
+    .default([])
+    .transform((list) => (list.length > 0 ? list.join(", ") : null)),
+  message: optionalText(1000),
   source: z.string().trim().max(60).default("landing"),
 });
 

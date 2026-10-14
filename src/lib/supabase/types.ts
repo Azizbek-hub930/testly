@@ -55,6 +55,13 @@ export interface Database {
           role: string | null;
           source: string;
           notes: string | null;
+          phone: string | null;
+          telegram: string | null;
+          city: string | null;
+          students: string | null;
+          exams: string | null;
+          message: string | null;
+          website: string | null;
           created_at: string;
         };
         Insert: {
@@ -63,6 +70,13 @@ export interface Database {
           organization?: string | null;
           role?: string | null;
           source?: string;
+          phone?: string | null;
+          telegram?: string | null;
+          city?: string | null;
+          students?: string | null;
+          exams?: string | null;
+          message?: string | null;
+          website?: string | null;
         };
         Update: {
           name?: string;

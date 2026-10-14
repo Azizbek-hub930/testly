@@ -25,14 +25,10 @@ export function AuthLayout({
           className="pointer-events-none absolute -left-24 top-1/3 h-[420px] w-[420px] rounded-full bg-indigo/25 blur-[120px]"
         />
         <Link to="/" className="relative">
-          <TestlyLogo wordClassName="text-white" />
+          <TestlyLogo tone="dark" />
         </Link>
         <div className="relative">
-          <TestlyMark
-            className="h-10 w-10 float-slow"
-            navyClassName="fill-white"
-            accentClassName="fill-indigo"
-          />
+          <TestlyMark className="h-10 w-10 float-slow" tone="dark" />
           <p className="display mt-8 max-w-sm text-[2.5rem] text-white">
             Build better assessments with AI.
           </p>
