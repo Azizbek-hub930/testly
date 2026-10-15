@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Search, ShieldCheck, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -20,6 +20,10 @@ import type { Profile } from "@/lib/supabase/types";
 import { setUserRole } from "@/rpc/admin";
 
 export const Route = createFileRoute("/admin/users")({
+  // Parked: there is a single admin.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin/waitlist" });
+  },
   component: AdminUsers,
 });
 

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ExternalLink, ShieldCheck } from "lucide-react";
 
 import { Reveal } from "@/components/site/reveal";
@@ -6,6 +6,10 @@ import { PageHeader, PanelCard } from "@/components/workspace/ui";
 import { useAuth } from "@/lib/auth/context";
 
 export const Route = createFileRoute("/admin/settings")({
+  // Parked: not needed while the admin area is just the waitlist.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin/waitlist" });
+  },
   component: AdminSettings,
 });
 

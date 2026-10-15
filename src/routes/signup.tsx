@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
+import { Link, createFileRoute, useRouter, redirect } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { AuthError, AuthField, AuthLayout, GoogleButton } from "@/components/auth/auth-layout";
@@ -15,6 +15,10 @@ const TITLE = "Create your Testly account";
 const DESC = "Start generating original SAT and IELTS practice material with Testly.";
 
 export const Route = createFileRoute("/signup")({
+  // Public sign-up is closed. The only account is the admin, created in Supabase.
+  beforeLoad: () => {
+    throw redirect({ to: "/signin" });
+  },
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => {
     const redirect = search["redirect"];
     return typeof redirect === "string" ? { redirect } : {};

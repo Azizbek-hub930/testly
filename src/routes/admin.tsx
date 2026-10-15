@@ -1,29 +1,22 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { LayoutGrid, ListChecks, Settings, Users } from "lucide-react";
 
 import { RequireAdmin } from "@/components/auth/guards";
-import { WorkspaceShell, type NavItem } from "@/components/workspace/shell";
+import { HomeShell } from "@/components/home/theme";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
-    meta: [{ title: "Testly Admin" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "Waitlist — Testly" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminLayout,
 });
 
-const NAV: NavItem[] = [
-  { label: "Overview", to: "/admin", icon: LayoutGrid, exact: true },
-  { label: "Waitlist", to: "/admin/waitlist", icon: ListChecks },
-  { label: "Users", to: "/admin/users", icon: Users },
-  { label: "Settings", to: "/admin/settings", icon: Settings },
-];
-
+/** The admin area is a single page (the waitlist), in the landing page's dark design. */
 function AdminLayout() {
   return (
     <RequireAdmin>
-      <WorkspaceShell nav={NAV} label="Testly Admin">
+      <HomeShell>
         <Outlet />
-      </WorkspaceShell>
+      </HomeShell>
     </RequireAdmin>
   );
 }

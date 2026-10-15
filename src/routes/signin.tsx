@@ -94,14 +94,11 @@ function SignIn() {
   return (
     <AuthLayout
       title="Sign in"
-      subtitle="Welcome back. Continue building assessments."
+      subtitle="Admin access to the Testly waitlist."
       footer={
-        <>
-          New to Testly?{" "}
-          <Link to="/signup" className="font-medium text-indigo hover:underline">
-            Create an account
-          </Link>
-        </>
+        <Link to="/" className="font-medium text-indigo hover:underline">
+          Back to Testly
+        </Link>
       }
     >
       <form className="space-y-4" onSubmit={onSubmit} noValidate>

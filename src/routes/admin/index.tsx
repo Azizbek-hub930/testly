@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, redirect } from "@tanstack/react-router";
 import { ArrowRight, ListChecks } from "lucide-react";
 
 import { Reveal } from "@/components/site/reveal";
@@ -17,6 +17,10 @@ import { useAuth } from "@/lib/auth/context";
 import { toFriendlyMessage } from "@/lib/errors";
 
 export const Route = createFileRoute("/admin/")({
+  // The admin area is just the waitlist for now.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin/waitlist" });
+  },
   component: AdminOverview,
 });
 

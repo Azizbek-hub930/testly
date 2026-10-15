@@ -1,466 +1,307 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, ListChecks, Search, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { Download, LogOut, RefreshCw, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 
-import { Cta } from "@/components/site/cta";
-import { Reveal } from "@/components/site/reveal";
-import {
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  PanelCard,
-  TableSkeleton,
-  formatDate,
-  formatDateTime,
-} from "@/components/workspace/ui";
-import {
-  fetchWaitlistPage,
-  fetchWaitlistStats,
-  updateWaitlistNotes,
-  type WaitlistSort,
-} from "@/lib/api/admin";
+import { TestlyLogo } from "@/components/brand/testly-mark";
+import { Container, EASE } from "@/components/home/ui";
+import { fetchAllWaitlist } from "@/lib/api/admin";
 import { useAuth } from "@/lib/auth/context";
 import { toFriendlyMessage } from "@/lib/errors";
 import type { WaitlistEntry } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { WAITLIST_ROLES } from "@/lib/validation";
 
-const PAGE_SIZE = 20;
-
 export const Route = createFileRoute("/admin/waitlist")({
-  component: AdminWaitlist,
+  component: WaitlistAdmin,
 });
 
-function AdminWaitlist() {
-  const { isAdmin } = useAuth();
+/*
+ * The admin's only page: everyone on the waitlist, with every answer they
+ * gave. Anything an applicant left blank shows as "N/A". Reading the table
+ * is restricted to admins by Row Level Security, not by this page.
+ */
 
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebounced(searchInput, 300);
-  const [role, setRole] = useState("");
-  const [organization, setOrganization] = useState("");
-  const [sort, setSort] = useState<WaitlistSort>("newest");
-  const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<WaitlistEntry | null>(null);
+const NA = "N/A";
+const show = (value: string | null | undefined) => (value && value.trim().length > 0 ? value : NA);
 
-  // Any filter change invalidates the current page number.
-  useEffect(() => {
-    setPage(1);
-  }, [search, role, organization, sort]);
+const FIELDS: { key: keyof WaitlistEntry; label: string; mono?: boolean }[] = [
+  { key: "email", label: "Email", mono: true },
+  { key: "phone", label: "Phone", mono: true },
+  { key: "telegram", label: "Telegram", mono: true },
+  { key: "organization", label: "Organization" },
+  { key: "city", label: "City" },
+  { key: "website", label: "Website", mono: true },
+  { key: "students", label: "Size" },
+  { key: "exams", label: "Exams" },
+];
 
-  const stats = useQuery({
-    queryKey: ["admin", "waitlist-stats"],
-    queryFn: fetchWaitlistStats,
-    enabled: isAdmin,
+function formatWhen(iso: string) {
+  return new Date(iso).toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
+}
 
-  const list = useQuery({
-    queryKey: ["admin", "waitlist", { search, role, organization, sort, page }],
-    queryFn: () =>
-      fetchWaitlistPage({ search, role, organization, sort, page, pageSize: PAGE_SIZE }),
-    enabled: isAdmin,
-  });
+function WaitlistAdmin() {
+  const { user, signOut } = useAuth();
+  const [query, setQuery] = useState("");
+  const [role, setRole] = useState<string>("All");
 
-  const total = list.data?.total ?? 0;
-  const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const firstRow = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const lastRow = Math.min(page * PAGE_SIZE, total);
-  const filtered = Boolean(search || role || organization);
+  const list = useQuery({ queryKey: ["admin", "waitlist", "all"], queryFn: fetchAllWaitlist });
+  const rows = useMemo(() => list.data ?? [], [list.data]);
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { All: rows.length };
+    for (const r of rows) c[r.role ?? "Other"] = (c[r.role ?? "Other"] ?? 0) + 1;
+    return c;
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (role !== "All" && (r.role ?? "Other") !== role) return false;
+      if (!q) return true;
+      return [r.name, r.email, r.phone, r.organization, r.city, r.telegram]
+        .filter(Boolean)
+        .some((v) => (v as string).toLowerCase().includes(q));
+    });
+  }, [rows, query, role]);
+
+  const exportCsv = () => {
+    const header = ["Joined", "Name", "Role", ...FIELDS.map((f) => f.label), "Message"];
+    const lines = filtered.map((r) =>
+      [
+        formatWhen(r.created_at),
+        r.name,
+        show(r.role),
+        ...FIELDS.map((f) => show(r[f.key] as string | null)),
+        show(r.message),
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(","),
+    );
+    const blob = new Blob(["﻿" + [header.join(","), ...lines].join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `testly-waitlist-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const roleFilters = ["All", ...WAITLIST_ROLES];
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow="Testly Admin"
-        title="Waitlist."
-        actions={
-          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-            {stats.data ? `${stats.data.total} total` : ""}
-          </span>
-        }
+    <div className="relative min-h-screen">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(60%_80%_at_50%_0%,rgb(121_82_246/0.22),transparent)]"
       />
 
-      <Reveal>
-        <div className="paper-card p-4 sm:p-5">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="search"
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search name, email or organization"
-                aria-label="Search the waitlist"
-                className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-3.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground/60 focus:border-indigo/50 focus:shadow-[0_0_0_4px_color-mix(in_oklab,var(--indigo)_14%,transparent)]"
-              />
-            </div>
-
-            <FilterSelect
-              label="Role"
-              value={role}
-              onChange={setRole}
-              options={[
-                { value: "", label: "All roles" },
-                ...WAITLIST_ROLES.map((item) => ({ value: item, label: item })),
-              ]}
-            />
-
-            <FilterSelect
-              label="Organization"
-              value={organization}
-              onChange={setOrganization}
-              options={[
-                { value: "", label: "All organizations" },
-                ...(stats.data?.organizationList ?? []).map((item) => ({
-                  value: item,
-                  label: item,
-                })),
-              ]}
-            />
-
-            <FilterSelect
-              label="Sort"
-              value={sort}
-              onChange={(value) => setSort(value as WaitlistSort)}
-              options={[
-                { value: "newest", label: "Newest first" },
-                { value: "oldest", label: "Oldest first" },
-              ]}
-            />
-          </div>
-
-          {filtered ? (
+      {/* Top bar */}
+      <header className="border-b border-white/[0.07]">
+        <Container className="flex h-16 items-center justify-between gap-4">
+          <Link to="/" aria-label="Testly home">
+            <TestlyLogo tone="dark" />
+          </Link>
+          <div className="flex items-center gap-3">
+            <span className="hidden text-xs text-mist sm:inline">{user?.email}</span>
             <button
               type="button"
-              onClick={() => {
-                setSearchInput("");
-                setRole("");
-                setOrganization("");
-              }}
-              className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-indigo hover:underline"
+              onClick={() => void signOut()}
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-white/10 px-3.5 text-sm text-snow/80 transition-colors hover:border-white/25 hover:text-snow"
             >
-              <X className="h-3.5 w-3.5" /> Clear filters
+              <LogOut className="h-4 w-4" /> Sign out
             </button>
-          ) : null}
-        </div>
-      </Reveal>
+          </div>
+        </Container>
+      </header>
 
-      <Reveal delay={0.06}>
-        <PanelCard
-          title={
-            list.isPending
-              ? "Loading"
-              : `${total} ${total === 1 ? "person" : "people"}${filtered ? " matched" : ""}`
-          }
-        >
-          {list.isPending ? (
-            <TableSkeleton rows={6} columns={5} />
-          ) : list.isError ? (
-            <ErrorState
-              message={toFriendlyMessage(list.error, "admin")}
-              onRetry={() => void list.refetch()}
-            />
-          ) : total === 0 ? (
-            <EmptyState
-              icon={ListChecks}
-              title={filtered ? "No matches" : "No one on the waitlist yet"}
-              description={
-                filtered
-                  ? "Try a different search or clear the filters."
-                  : "Submissions from the landing page appear here the moment they arrive."
-              }
-            />
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[46rem] border-collapse text-left">
-                  <thead>
-                    <tr className="border-b border-hairline">
-                      {["Name", "Email", "Organization", "Role", "Joined", "Source"].map(
-                        (heading) => (
-                          <th
-                            key={heading}
-                            scope="col"
-                            className="px-5 py-3 font-mono text-[10px] uppercase tracking-[0.14em] font-medium text-muted-foreground"
-                          >
-                            {heading}
-                          </th>
-                        ),
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {list.data?.rows.map((entry) => (
-                      <tr
-                        key={entry.id}
-                        tabIndex={0}
-                        role="button"
-                        onClick={() => setSelected(entry)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setSelected(entry);
-                          }
-                        }}
-                        className="cursor-pointer border-b border-hairline transition-colors last:border-0 hover:bg-accent/50 focus:bg-accent/50"
-                      >
-                        <td className="max-w-[12rem] truncate px-5 py-3.5 text-sm font-medium">
-                          {entry.name}
-                        </td>
-                        <td className="max-w-[16rem] truncate px-5 py-3.5 text-sm text-muted-foreground">
-                          {entry.email}
-                        </td>
-                        <td className="max-w-[12rem] truncate px-5 py-3.5 text-sm text-muted-foreground">
-                          {entry.organization ?? "—"}
-                        </td>
-                        <td className="px-5 py-3.5 text-sm text-muted-foreground">
-                          {entry.role ?? "—"}
-                        </td>
-                        <td className="whitespace-nowrap px-5 py-3.5 text-sm text-muted-foreground">
-                          {formatDate(entry.created_at)}
-                        </td>
-                        <td className="px-5 py-3.5 text-sm text-muted-foreground">
-                          {entry.source}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline px-5 py-3.5">
-                <p className="text-xs text-muted-foreground">
-                  Showing {firstRow}–{lastRow} of {total}
-                </p>
-                <div className="flex items-center gap-2">
-                  <PagerButton
-                    label="Previous page"
-                    disabled={page <= 1}
-                    onClick={() => setPage((value) => Math.max(1, value - 1))}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </PagerButton>
-                  <span className="text-xs tabular-nums text-muted-foreground">
-                    {page} / {lastPage}
-                  </span>
-                  <PagerButton
-                    label="Next page"
-                    disabled={page >= lastPage}
-                    onClick={() => setPage((value) => Math.min(lastPage, value + 1))}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </PagerButton>
-                </div>
-              </div>
-            </>
-          )}
-        </PanelCard>
-      </Reveal>
-
-      <WaitlistDetail entry={selected} onClose={() => setSelected(null)} />
-    </div>
-  );
-}
-
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <label className="block">
-      <span className="sr-only">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label={label}
-        className="h-11 w-full appearance-none rounded-xl border border-border bg-background px-3.5 text-sm outline-none transition-shadow focus:border-indigo/50 focus:shadow-[0_0_0_4px_color-mix(in_oklab,var(--indigo)_14%,transparent)]"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function PagerButton({
-  label,
-  children,
-  onClick,
-  disabled,
-}: {
-  label: string;
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      disabled={disabled}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-indigo/40 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-    >
-      {children}
-    </button>
-  );
-}
-
-function WaitlistDetail({ entry, onClose }: { entry: WaitlistEntry | null; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [notes, setNotes] = useState("");
-
-  useEffect(() => {
-    setNotes(entry?.notes ?? "");
-  }, [entry]);
-
-  useEffect(() => {
-    if (!entry) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [entry, onClose]);
-
-  const save = useMutation({
-    mutationFn: () => updateWaitlistNotes(entry?.id ?? "", notes),
-    onSuccess: () => {
-      toast.success("Notes saved.");
-      void queryClient.invalidateQueries({ queryKey: ["admin", "waitlist"] });
-      onClose();
-    },
-    onError: (error) => toast.error(toFriendlyMessage(error, "admin")),
-  });
-
-  return (
-    <AnimatePresence>
-      {entry ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 grid place-items-end bg-navy/35 p-0 backdrop-blur-sm sm:place-items-center sm:p-6"
-          onClick={onClose}
-        >
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Waitlist entry for ${entry.name}`}
-            initial={{ opacity: 0, y: 24, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-            onClick={(event) => event.stopPropagation()}
-            className="paper-card paper-raised max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-b-none sm:rounded-[14px]"
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4">
-              <div className="min-w-0">
-                <p className="eyebrow text-muted-foreground">Waitlist entry</p>
-                <h2 className="display mt-1.5 truncate text-xl">{entry.name}</h2>
-              </div>
+      <main className="pb-24 pt-10 sm:pt-14">
+        <Container>
+          {/* Title + actions */}
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <p className="mono-label text-[11px] text-violet-soft">Admin</p>
+              <h1 className="font-display mt-3 text-[2.25rem] leading-none text-snow sm:text-[2.75rem]">
+                Waitlist
+              </h1>
+              <p className="mt-3 text-mist">
+                {list.isLoading
+                  ? "Loading…"
+                  : `${rows.length} ${rows.length === 1 ? "person has" : "people have"} joined so far.`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={onClose}
-                aria-label="Close"
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => void list.refetch()}
+                aria-label="Refresh"
+                className="grid h-11 w-11 place-items-center rounded-full border border-white/10 text-snow/80 transition-colors hover:border-white/25 hover:text-snow"
               >
-                <X className="h-4 w-4" />
+                <RefreshCw className={cn("h-4 w-4", list.isFetching && "animate-spin")} />
+              </button>
+              <button
+                type="button"
+                onClick={exportCsv}
+                disabled={filtered.length === 0}
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-[linear-gradient(180deg,#8f6dff,#6a45ea)] px-5 text-sm font-medium text-[#fff] shadow-[0_12px_30px_-12px_rgb(121_82_246/0.9)] transition-opacity disabled:opacity-40"
+              >
+                <Download className="h-4 w-4" /> Export CSV
               </button>
             </div>
+          </div>
 
-            <dl className="divide-y divide-hairline">
-              <DetailRow label="Email" value={entry.email} mono />
-              <DetailRow label="Organization" value={entry.organization ?? "—"} />
-              <DetailRow label="Role" value={entry.role ?? "—"} />
-              <DetailRow label="Phone" value={entry.phone ?? "—"} mono />
-              <DetailRow label="Telegram" value={entry.telegram ?? "—"} mono />
-              <DetailRow label="Website" value={entry.website ?? "—"} mono />
-              <DetailRow label="City" value={entry.city ?? "—"} />
-              <DetailRow label="Students" value={entry.students ?? "—"} />
-              <DetailRow label="Exams" value={entry.exams ?? "—"} />
-              <DetailRow label="Message" value={entry.message ?? "—"} />
-              <DetailRow label="Joined" value={formatDateTime(entry.created_at)} />
-              <DetailRow label="Source" value={entry.source} />
-            </dl>
-
-            <div className="border-t border-hairline p-5">
-              <label htmlFor="waitlist-notes" className="eyebrow text-muted-foreground">
-                Internal notes
-              </label>
-              <textarea
-                id="waitlist-notes"
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                rows={3}
-                maxLength={2000}
-                placeholder="Only visible to administrators."
-                className="mt-2 w-full resize-y rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground/60 focus:border-indigo/50 focus:shadow-[0_0_0_4px_color-mix(in_oklab,var(--indigo)_14%,transparent)]"
+          {/* Search + role filter */}
+          <div className="mt-8 flex flex-col gap-4">
+            <label className="relative block max-w-md">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-mist" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name, email, phone, organization…"
+                className="h-12 w-full rounded-full border border-white/10 bg-white/[0.03] pl-11 pr-4 text-sm text-snow outline-none placeholder:text-mist/50 focus:border-violet-soft/60 focus:shadow-[0_0_0_4px_rgb(121_82_246/0.16)]"
               />
-              <div className="mt-4 flex flex-wrap justify-end gap-2">
-                <Cta size="sm" variant="outline" type="button" onClick={onClose}>
-                  Close
-                </Cta>
-                <Cta
-                  size="sm"
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {roleFilters.map((r) => (
+                <button
+                  key={r}
                   type="button"
-                  onClick={() => save.mutate()}
-                  disabled={save.isPending || notes === (entry.notes ?? "")}
+                  onClick={() => setRole(r)}
+                  className={cn(
+                    "inline-flex h-9 items-center gap-2 rounded-full border px-3.5 text-[13px] transition-colors",
+                    role === r
+                      ? "border-transparent bg-violet/25 text-snow"
+                      : "border-white/10 text-mist hover:text-snow",
+                  )}
                 >
-                  {save.isPending ? "Saving…" : "Save notes"}
-                </Cta>
-              </div>
+                  {r}
+                  <span className="rounded-full bg-white/10 px-1.5 text-[11px] tabular-nums">
+                    {counts[r] ?? 0}
+                  </span>
+                </button>
+              ))}
             </div>
-          </motion.div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
-  );
-}
+          </div>
 
-function DetailRow({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex flex-wrap items-baseline justify-between gap-3 px-5 py-3.5">
-      <dt className="eyebrow text-muted-foreground">{label}</dt>
-      <dd
-        className={cn(
-          "min-w-0 max-w-[60%] break-words text-right text-sm",
-          mono && "font-mono text-xs",
-        )}
-      >
-        {value}
-      </dd>
+          {/* List */}
+          <div className="mt-8">
+            {list.isError ? (
+              <Notice
+                title="Couldn't load the waitlist"
+                body={toFriendlyMessage(list.error, "generic")}
+              />
+            ) : list.isLoading ? (
+              <div className="space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="glass h-40 animate-pulse rounded-[22px]" />
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
+              <Notice
+                title={rows.length === 0 ? "No one has joined yet" : "No matches"}
+                body={
+                  rows.length === 0
+                    ? "New sign-ups from the waitlist page will appear here."
+                    : "Try a different search or filter."
+                }
+              />
+            ) : (
+              <ul className="space-y-3">
+                <AnimatePresence initial={false}>
+                  {filtered.map((r, i) => (
+                    <motion.li
+                      key={r.id}
+                      layout
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.03, ease: EASE }}
+                    >
+                      <EntryCard entry={r} />
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
+              </ul>
+            )}
+          </div>
+        </Container>
+      </main>
     </div>
   );
 }
 
-function useDebounced<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
+function EntryCard({ entry }: { entry: WaitlistEntry }) {
+  const initials = entry.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+  return (
+    <article className="glass rounded-[22px] p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-violet/25 text-sm font-semibold text-[var(--chip-text)]">
+            {initials || "?"}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-lg font-semibold text-snow">{entry.name}</p>
+            <p className="text-xs text-mist">Joined {formatWhen(entry.created_at)}</p>
+          </div>
+        </div>
+        <span className="rounded-full border border-violet-soft/40 bg-violet/15 px-3 py-1 text-xs font-medium text-[var(--chip-text)]">
+          {show(entry.role)}
+        </span>
+      </div>
 
-  useEffect(() => {
-    const id = window.setTimeout(() => setDebounced(value), delay);
-    return () => window.clearTimeout(id);
-  }, [value, delay]);
+      <dl className="mt-5 grid gap-x-6 gap-y-4 border-t border-white/[0.07] pt-5 sm:grid-cols-2 lg:grid-cols-4">
+        {FIELDS.map((f) => {
+          const value = show(entry[f.key] as string | null);
+          const empty = value === NA;
+          return (
+            <div key={f.key} className="min-w-0">
+              <dt className="mono-label text-[10px] text-mist/70">{f.label}</dt>
+              <dd
+                className={cn(
+                  "mt-1 break-words text-sm",
+                  empty ? "text-mist/50" : "text-snow",
+                  f.mono && !empty && "font-mono text-[13px]",
+                )}
+              >
+                {value}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
 
-  return debounced;
+      <div className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+        <p className="mono-label text-[10px] text-mist/70">Message</p>
+        <p
+          className={cn(
+            "mt-1 whitespace-pre-wrap text-sm leading-relaxed",
+            entry.message ? "text-snow/90" : "text-mist/50",
+          )}
+        >
+          {show(entry.message)}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+function Notice({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="glass rounded-[22px] px-6 py-14 text-center">
+      <p className="text-lg font-semibold text-snow">{title}</p>
+      <p className="mt-2 text-sm text-mist">{body}</p>
+    </div>
+  );
 }

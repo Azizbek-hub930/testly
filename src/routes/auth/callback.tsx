@@ -47,7 +47,7 @@ function AuthCallback() {
       const supabase = getSupabaseClient();
       const url = new URL(window.location.href);
       const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
-      const next = safeRedirect(url.searchParams.get("next"), "/dashboard");
+      const next = safeRedirect(url.searchParams.get("next"), "/admin/waitlist");
 
       const provider =
         url.searchParams.get("error_description") ??

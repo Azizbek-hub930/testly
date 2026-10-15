@@ -1,4 +1,4 @@
-import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { FileText, LayoutGrid, Settings, Sparkles } from "lucide-react";
 
 import { RequireAuth } from "@/components/auth/guards";
@@ -8,6 +8,10 @@ const TITLE = "Testly workspace";
 const DESC = "Upload source material and generate SAT and IELTS assessments.";
 
 export const Route = createFileRoute("/dashboard")({
+  // The product workspace is parked for now; only the waitlist is in use.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin/waitlist" });
+  },
   head: () => ({
     meta: [
       { title: `${TITLE} — AI assessment engine` },

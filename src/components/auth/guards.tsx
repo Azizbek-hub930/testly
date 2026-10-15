@@ -69,7 +69,7 @@ export function Forbidden() {
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-2">
           <Cta asChild>
-            <Link to="/dashboard">Back to dashboard</Link>
+            <Link to="/">Back to Testly</Link>
           </Cta>
           <Cta variant="outline" asChild>
             <Link to="/">Go home</Link>

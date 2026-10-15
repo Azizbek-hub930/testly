@@ -163,3 +163,14 @@ function parseStats(value: Json): WaitlistStats {
     daily,
   };
 }
+
+/** Every waitlist entry, newest first (admins only — enforced by RLS). */
+export async function fetchAllWaitlist(): Promise<WaitlistEntry[]> {
+  const { data, error } = await getSupabaseClient()
+    .from("waitlist")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(2000);
+  if (error) throw error;
+  return data ?? [];
+}

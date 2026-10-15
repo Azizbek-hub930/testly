@@ -8,7 +8,7 @@ const INTERNAL_PATH = /^\/(?!\/)[\w\-./~]*$/;
  * Anything that isn't a plain in-app pathname (`//evil.example`, `https://…`,
  * `javascript:…`) falls back to a known-safe route.
  */
-export function safeRedirect(value: unknown, fallback = "/dashboard"): string {
+export function safeRedirect(value: unknown, fallback = "/admin/waitlist"): string {
   if (typeof value !== "string" || value.length === 0) return fallback;
   if (!INTERNAL_PATH.test(value)) return fallback;
   return value;
